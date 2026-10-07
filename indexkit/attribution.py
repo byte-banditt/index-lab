@@ -35,6 +35,7 @@ def brinson(result, panel, bench, sectors, targets=None, label="Equal-weight sam
             rows.append(
                 dict(
                     attribution_benchmark=label,
+                    attribution_type="asset_allocation" if targets is not None else "sector",
                     index=result.name,
                     month=str(period),
                     sector=sector,
@@ -51,6 +52,7 @@ def brinson(result, panel, bench, sectors, targets=None, label="Equal-weight sam
         periods.append(
             dict(
                 attribution_benchmark=label,
+                attribution_type="asset_allocation" if targets is not None else "sector",
                 index=result.name,
                 month=str(period),
                 portfolio_gross=rp,
@@ -69,6 +71,7 @@ def brinson(result, panel, bench, sectors, targets=None, label="Equal-weight sam
         [
             dict(
                 attribution_benchmark=label,
+                attribution_type="asset_allocation" if targets is not None else "sector",
                 index=result.name,
                 arithmetic_active=arithmetic,
                 compounded_active=compounded,

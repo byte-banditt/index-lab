@@ -1,6 +1,6 @@
 .PHONY: all fast test java
 all:
-	python run_all.py
+	python run_all.py --full
 fast:
 	python run_all.py --fast
 test:
