@@ -54,6 +54,7 @@ def digital(s, k, t, r, vol, q=0.0, kind="call", cash=1.0):
     return dict(
         price=factor * ndtr(z * d2),
         delta=z * factor * pdf / (s * vol * np.sqrt(t)),
+        gamma=-z * factor * pdf * (1 + d2 / (vol * np.sqrt(t))) / (s * s * vol * np.sqrt(t)),
         vega=-z * factor * pdf * d1 / vol,
     )
 
