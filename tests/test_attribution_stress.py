@@ -25,7 +25,7 @@ def test_reconciles_and_stress():
         np.testing.assert_allclose(stock.weight.sum(), 1)
         np.testing.assert_allclose(sector.weight.sum(), 1)
         assert 0 < stat.HHI.iloc[0] <= 1
-        h = historical(p, stock, c)
+        h = historical(p, result, c)
         assert len(h) == 3
         assert (h.max_drawdown <= 0).all()
         shocks = hypothetical(stock)

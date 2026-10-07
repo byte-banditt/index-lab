@@ -7,6 +7,7 @@ import pandas as pd
 def betas(panel, bench, cfg):
     r = panel.pct_change(fill_method=None).reindex(bench.index).iloc[1:]
     b = bench.return_.iloc[1:]
+
     def estimate(stock):
         pairs = pd.concat([stock, b], axis=1).dropna()
         variance = pairs.iloc[:, 1].var(ddof=1)
@@ -50,9 +51,8 @@ def composition(result, sectors, beta, panel):
     return stocks, sector, stats
 
 
-def historical(panel, stocks, cfg):
-    w = stocks.set_index("symbol").weight
-    r = panel.pct_change(fill_method=None).iloc[1:]
+def historical(panel, result, cfg):
+    r = panel.pct_change(fill_method=None).reindex(result.weights.index)
     proxy = r.mean(axis=1)
     if r.index.min() <= pd.Timestamp("2020-02-01") and r.index.max() >= pd.Timestamp("2020-03-31"):
         windows = [("2020_Feb_Mar", r.loc["2020-02-01":"2020-03-31"])]
@@ -69,13 +69,15 @@ def historical(panel, stocks, cfg):
         windows = [(f"worst20_{j + 1}", r.iloc[i - 19 : i + 1]) for j, i in enumerate(selected)]
     rows = []
     for label, window in windows:
-        # Frozen initial units: buy and hold during replay, no rebalancing/costs.
-        level = (1 + window).cumprod().mul(w, axis=1).sum(axis=1)
+        # Use the beginning weights actually held on every historical session.
+        held_returns = (window * result.weights.reindex(window.index)).sum(axis=1)
+        level = (1 + held_returns).cumprod()
         with_base = pd.concat([pd.Series([1.0]), level.reset_index(drop=True)], ignore_index=True)
         daily = with_base.pct_change().iloc[1:]
         rows.append(
             dict(
-                index=stocks["index"].iloc[0],
+                index=result.name,
+                exposure="actual historical daily weights; gross",
                 scenario=label,
                 start=window.index.min(),
                 end=window.index.max(),

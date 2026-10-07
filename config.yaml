@@ -157,5 +157,29 @@
       0.01,
       0.02
     ]
+  },
+  "robustness": {
+    "block_days": 21,
+    "resamples": 2000,
+    "top_n": [
+      5,
+      10,
+      15
+    ],
+    "momentum_months": [
+      6,
+      9,
+      12
+    ],
+    "vol_days": [
+      30,
+      60,
+      90
+    ],
+    "cost_bps": [
+      0,
+      10,
+      25
+    ]
   }
 }
