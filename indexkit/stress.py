@@ -7,10 +7,16 @@ import pandas as pd
 def betas(panel, bench, cfg):
     r = panel.pct_change(fill_method=None).reindex(bench.index).iloc[1:]
     b = bench.return_.iloc[1:]
-    variance = b.var(ddof=1)
-    if variance <= 0:
-        raise ValueError("Benchmark variance must be positive")
-    return r.apply(lambda x: x.cov(b) / variance)
+    def estimate(stock):
+        pairs = pd.concat([stock, b], axis=1).dropna()
+        variance = pairs.iloc[:, 1].var(ddof=1)
+        if len(pairs) < 2 or not np.isfinite(variance) or variance <= 0:
+            raise ValueError("Benchmark paired variance must be positive")
+        return pairs.iloc[:, 0].cov(pairs.iloc[:, 1]) / variance
+
+    output = r.apply(estimate)
+    output.attrs["benchmark"] = bench.attrs.get("label", cfg["benchmark"])
+    return output
 
 
 def composition(result, sectors, beta, panel):
@@ -27,6 +33,7 @@ def composition(result, sectors, beta, panel):
         }
     )
     stocks["index"] = result.name
+    stocks["beta_benchmark"] = beta.attrs.get("benchmark", "unverified")
     sector = stocks.groupby("sector").weight.sum().reset_index()
     sector["index"] = result.name
     stats = pd.DataFrame(

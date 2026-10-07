@@ -3,14 +3,19 @@
 import numpy as np
 import pandas as pd
 
-from .data import ROOT
+from .data import output_root
 from .options import digital, vanilla
 
 
 def factors(vol, r, q, observations, paths, seed, steps=252):
     observations = np.asarray(observations, dtype=float)
     if (
-        paths < 2
+        observations.ndim != 1
+        or not np.isfinite(observations).all()
+        or not np.isfinite([vol, r, q]).all()
+        or not isinstance(paths, (int, np.integer))
+        or not isinstance(steps, (int, np.integer))
+        or paths < 2
         or steps < 1
         or vol < 0
         or len(observations) == 0
@@ -38,8 +43,28 @@ def factors(vol, r, q, observations, paths, seed, steps=252):
 
 
 def payoff(spot, reference, obs, minimum, times, r, coupon, autocall_barrier, knock_in):
-    if min(spot, reference, autocall_barrier, knock_in) <= 0 or coupon < 0:
+    obs = np.asarray(obs, dtype=float)
+    minimum = np.asarray(minimum, dtype=float)
+    times = np.asarray(times, dtype=float)
+    if (
+        not np.isfinite([spot, reference, r, coupon, autocall_barrier, knock_in]).all()
+        or min(spot, reference, autocall_barrier, knock_in) <= 0
+        or coupon < 0
+    ):
         raise ValueError("Invalid contract")
+    if (
+        obs.ndim != 2
+        or obs.shape[1] < 2
+        or obs.shape[0] == 0
+        or minimum.shape != (obs.shape[1],)
+        or times.shape != (obs.shape[0],)
+        or not all(np.isfinite(a).all() for a in (obs, minimum, times))
+        or (obs <= 0).any()
+        or (minimum <= 0).any()
+        or (times <= 0).any()
+        or (np.diff(times) <= 0).any()
+    ):
+        raise ValueError("Invalid simulated paths")
     paths = obs.shape[1]
     alive = np.ones(paths, dtype=bool)
     pv = np.zeros(paths)
@@ -105,6 +130,8 @@ def greeks(inputs, paths=100000, seed=42):
 
     hs = reference * p.get("spot_bump_ratio", 0.005)
     hv = p.get("vol_bump", 0.005)
+    if not np.isfinite([hs, hv]).all() or not 0 < hs < reference or hv <= 0:
+        raise ValueError("Invalid Greek bumps")
     if p["vol"] <= hv:
         raise ValueError("Volatility bump requires positive lower volatility")
     return dict(
@@ -168,7 +195,7 @@ def artifacts(cfg, fast=False):
     p = cfg["structured"]
     s = p["spot"]
     table = skew_prices(cfg["options"], cfg["skew"])
-    table.to_csv(ROOT / "reports/illustrative_skew.csv", index=False)
+    table.to_csv(output_root() / "reports/illustrative_skew.csv", index=False)
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
     for ax, field in zip(axes, ["digital", "put_spread"]):
         ax.plot(table.strike, table[f"flat_{field}"], label="Flat vol")
@@ -177,7 +204,7 @@ def artifacts(cfg, fast=False):
         ax.legend()
     fig.suptitle("Illustrative skew, not market data")
     fig.tight_layout()
-    fig.savefig(ROOT / "reports/illustrative_skew.png")
+    fig.savefig(output_root() / "reports/illustrative_skew.png")
     plt.close(fig)
     x = np.linspace(0.3 * s, 1.6 * s, 300)
     fig, axes = plt.subplots(2, 2, figsize=(10, 7))
@@ -204,7 +231,7 @@ def artifacts(cfg, fast=False):
         ax.set_ylabel("Payoff")
         ax.grid(alpha=0.2)
     fig.tight_layout()
-    fig.savefig(ROOT / "reports/payoffs.png")
+    fig.savefig(output_root() / "reports/payoffs.png")
     plt.close(fig)
     if fast:
         return None
@@ -232,14 +259,14 @@ def artifacts(cfg, fast=False):
                 **g,
             )
         ]
-    ).to_csv(ROOT / "reports/autocallable.csv", index=False)
+    ).to_csv(output_root() / "reports/autocallable.csv", index=False)
     pd.DataFrame(
         {
             "observation": p["observations"],
             "first_call_probability": quote["early_call_prob"],
             "cumulative_call_probability": np.cumsum(quote["early_call_prob"]),
         }
-    ).to_csv(ROOT / "reports/autocall_probabilities.csv", index=False)
+    ).to_csv(output_root() / "reports/autocall_probabilities.csv", index=False)
     obs, minimum, times = factors(
         p["vol"], p["rate"], p["q"], p["observations"], p["plot_paths"], cfg["seed"], p["steps"]
     )
@@ -271,6 +298,6 @@ def artifacts(cfg, fast=False):
     )
     ax.legend()
     fig.tight_layout()
-    fig.savefig(ROOT / "reports/autocall_delta.png")
+    fig.savefig(output_root() / "reports/autocall_delta.png")
     plt.close(fig)
     return quote

@@ -46,9 +46,14 @@
     "LVOL10": {
       "rule": "low_vol",
       "n": 10
+    },
+    "MULTI": {
+      "rule": "multi_asset",
+      "n": 3,
+      "stock_jump_limit": 0.5
     }
   },
-  "benchmark": "equal_weight_sample",
+  "benchmark": "^NSEI",
   "thresholds": {
     "stock_jump": 0.2,
     "index_sigma": 4,
@@ -118,5 +123,16 @@
     "slope": 0.3,
     "min_vol": 0.05,
     "max_vol": 0.8
+  },
+  "multi": {
+    "gold_symbol": "GOLDBEES.NS",
+    "us_symbol": "NVDA",
+    "fx_symbol": "INR=X",
+    "max_fill_days": 5,
+    "targets": {
+      "EQUITY": 0.6,
+      "GOLD": 0.2,
+      "NVDA_INR": 0.2
+    }
   }
 }

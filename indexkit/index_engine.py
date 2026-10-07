@@ -70,18 +70,35 @@ class LowVolIndex(BaseIndex):
         return scores.sort_index().sort_values(kind="stable").head(self.n).index.tolist()
 
 
+class MultiAssetIndex(BaseIndex):
+    def select(self, history):
+        return list(history.columns)
+
+    def weight(self, selected, columns):
+        weights = pd.Series(self.cfg["multi"]["targets"]).reindex(columns)
+        if (
+            not np.isfinite(weights).all()
+            or (weights < 0).any()
+            or not np.isclose(weights.sum(), 1)
+        ):
+            raise ValueError("Invalid fixed sleeve weights")
+        return weights
+
+
 def build(panel, name, cfg):
     if panel.index.has_duplicates or not panel.index.is_monotonic_increasing:
         raise ValueError("Duplicate/out-of-order dates")
     if not np.isfinite(panel.to_numpy()).all() or (panel <= 0).any().any():
         raise ValueError("Invalid constituent price")
     returns = panel.pct_change(fill_method=None)
-    if (returns.abs() > cfg["thresholds"]["stock_jump"]).any().any():
+    jump_limit = cfg["indices"][name].get("stock_jump_limit", cfg["thresholds"]["stock_jump"])
+    if (returns.abs() > jump_limit).any().any():
         raise ValueError("Overnight jump")
     rule = cfg["indices"][name]["rule"]
-    if rule not in {"momentum", "low_vol"}:
+    if rule not in {"momentum", "low_vol", "multi_asset"}:
         raise ValueError("Unknown index rule")
-    engine = (MomentumIndex if rule == "momentum" else LowVolIndex)(name, cfg)
+    classes = {"momentum": MomentumIndex, "low_vol": LowVolIndex, "multi_asset": MultiAssetIndex}
+    engine = classes[rule](name, cfg)
     # Both indices start together after momentum warmup for comparable reporting.
     warmup = panel.index[0] + pd.DateOffset(months=cfg["momentum_months"])
     schedule = {eff: decision for decision, eff in rebalances(panel.index) if decision >= warmup}
@@ -147,9 +164,28 @@ def build(panel, name, cfg):
     )
 
 
-def benchmark(panel, dates, cfg):
+def benchmark(panel, dates, cfg, frame=None):
+    if cfg["benchmark"] == "^NSEI":
+        if frame is None:
+            raise ValueError("^NSEI benchmark requires source rows")
+        source = frame.loc[frame.symbol == "^NSEI", ["date", "close"]]
+        if source.empty or source.date.duplicated().any():
+            raise ValueError("Missing or duplicate ^NSEI source rows")
+        close = source.set_index("date").close.sort_index().reindex(dates)
+        if not np.isfinite(close.iloc[[0, -1]]).all() or (close.dropna() <= 0).any():
+            raise ValueError("Invalid ^NSEI benchmark endpoints/prices")
+        # Missing prices remain gaps; never forward fill or invent daily returns.
+        result = pd.DataFrame(
+            {
+                "return_": close.pct_change(fill_method=None),
+                "level": cfg["base_level"] * close / close.iloc[0],
+            }
+        )
+        result.iloc[0, result.columns.get_loc("return_")] = 0.0
+        result.attrs["label"] = "Nifty 50 price index (^NSEI)"
+        return result
     if cfg["benchmark"] != "equal_weight_sample":
-        raise ValueError("Benchmark not implemented")
+        raise ValueError("Unknown benchmark")
     r = panel.pct_change(fill_method=None).reindex(dates)
     w = pd.Series(1 / len(panel.columns), index=panel.columns)
     values = [0.0]
@@ -160,9 +196,11 @@ def benchmark(panel, dates, cfg):
         values.append(ret)
         w = w * (1 + r.loc[day]) / (1 + ret)
     returns = pd.Series(values, index=dates)
-    return pd.DataFrame(
+    result = pd.DataFrame(
         {"return_": returns, "level": cfg["base_level"] * (1 + returns).cumprod()}, index=dates
     )
+    result.attrs["label"] = "Equal-weight sample proxy"
+    return result
 
 
 def metrics(levels, benchmark_returns, cfg):
@@ -184,6 +222,7 @@ def metrics(levels, benchmark_returns, cfg):
         if active.std(ddof=1) > 0
         else np.nan,
         observations=n,
+        benchmark_observations=int(active.notna().sum()),
     )
 
 

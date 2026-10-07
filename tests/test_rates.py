@@ -46,3 +46,33 @@ def test_spread_mc():
 def test_range_strip():
     result = range_accrual(100, 80, 120, 1, 0.05, 0.2, 0.01, paths=100000, seed=42)
     assert abs(result["price"] - result["digital_strip"]) < 3 * result["se"]
+
+
+@pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+@pytest.mark.parametrize("field", ["forward", "strike", "expiry", "vol", "discount"])
+def test_black76_rejects_nonfinite(field, bad):
+    from indexkit.rates import black76
+
+    inputs = dict(forward=0.05, strike=0.05, expiry=1, vol=0.2, discount=0.95)
+    inputs[field] = bad
+    with pytest.raises(ValueError):
+        black76(**inputs)
+
+
+def test_rate_digital_boundaries():
+    from indexkit.rates import rate_digital
+
+    c = curve()
+    assert rate_digital(c, 0.06, 0.05, 0, 1, 0.2) == pytest.approx(c.df(1))
+    assert rate_digital(c, 0.04, 0.05, 0, 1, 0.2, "put") == pytest.approx(c.df(1))
+    assert rate_digital(c, 0.05, 0.05, 0, 0, 0.2) == 0
+    assert rate_digital(c, 0.06, 0.05, 1, 1, 0) == pytest.approx(c.df(1))
+    for field in ["forward", "strike", "expiry", "payment", "vol", "cash"]:
+        args = dict(forward=0.05, strike=0.05, expiry=1, payment=1, vol=0.2, cash=1)
+        args[field] = np.nan
+        with pytest.raises(ValueError):
+            rate_digital(c, **args)
+    with pytest.raises(ValueError):
+        rate_digital(c, 0.05, 0.05, 1, 0.5, 0.2)
+    with pytest.raises(ValueError):
+        rate_digital(c, 0.05, 0.05, -1, 1, 0.2)

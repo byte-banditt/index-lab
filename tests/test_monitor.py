@@ -63,3 +63,33 @@ def test_proposal_sanity_review(state):
     log = monitor(f, p, {"MOM10": r}, c)
     proposal = rebalance_report(r, p, c, log)
     assert "rebalance_turnover" in proposal.checks.iloc[0]
+
+
+def test_nan_unheld_weight_is_flagged(state):
+    c, f, p, r = state
+    day = r.weights.index[10]
+    unheld = r.weights.loc[day].index[r.weights.loc[day] == 0][0]
+    r.weights.loc[day, unheld] = float("nan")
+    log = monitor(f, p, {"MOM10": r}, c)
+    assert ((log.date == day) & (log.check_name == "weight_sum")).any()
+
+
+def test_exception_explanations_use_observed_data(state):
+    from copy import deepcopy
+
+    from indexkit.monitor import exception_explanations
+
+    c, f, p, r = state
+    c = deepcopy(c)
+    c["thresholds"]["index_sigma"] = 0.1
+    c["thresholds"]["turnover"] = 0.01
+    log = monitor(f, p, {"MOM10": r}, c)
+    explanations = exception_explanations(log, {"MOM10": r}, c)
+    assert set(explanations.check_name) == {"index_return_outlier", "rebalance_turnover"}
+    for row in explanations.itertuples():
+        if row.check_name == "index_return_outlier":
+            assert row.observed == pytest.approx(r.levels.loc[row.date, "return_"])
+        else:
+            event = r.turnover.set_index("effective_date").loc[row.date]
+            assert row.observed == pytest.approx(event.turnover)
+            assert row.threshold == c["thresholds"]["turnover"]

@@ -1,5 +1,6 @@
 """Daily oversight and proposed rebalance checks, with reusable mdq DQ."""
 
+import numpy as np
 import pandas as pd
 
 from .calendar import calendar_checks
@@ -17,8 +18,8 @@ def monitor(frame, panel, results, cfg):
     for name, result in results.items():
         issues.append(calendar_checks(frame, cfg["universe"], result.levels))
         for day, w in result.weights.iterrows():
-            if abs(w.sum() - 1) > 1e-9:
-                flag(day, name, "weight_sum", "Weights do not sum to one")
+            if not np.isfinite(w.to_numpy()).all() or abs(w.sum() - 1) > 1e-9:
+                flag(day, name, "weight_sum", "Weights non-finite or do not sum to one")
             for symbol in w[w > 0].index:
                 status = (
                     availability.loc[(day, symbol)] if (day, symbol) in availability.index else None
@@ -64,7 +65,7 @@ def rebalance_report(result, panel, cfg, exceptions):
             reasons.append("rebalance_count")
         if target.max() > cfg["thresholds"]["weight_cap"]:
             reasons.append("rebalance_cap")
-        if abs(target.sum() - 1) > 1e-9:
+        if not np.isfinite(target.to_numpy()).all() or abs(target.sum() - 1) > 1e-9:
             reasons.append("weight_sum")
         checks = "PASS" if not reasons else "REVIEW: " + ", ".join(reasons)
         for symbol in target.index:
@@ -88,3 +89,56 @@ def rebalance_report(result, panel, cfg, exceptions):
                 )
             )
     return pd.DataFrame(rows)
+
+
+def exception_explanations(log, results, cfg):
+    """Explain algorithmic exceptions from observed returns/trades, not news guesses."""
+    rows = []
+    selected = log[log.check_name.isin(["index_return_outlier", "rebalance_turnover"])]
+    for issue in selected.itertuples():
+        result = results[issue.symbol]
+        day = pd.Timestamp(issue.date)
+        if issue.check_name == "index_return_outlier":
+            returns = result.levels.return_.iloc[1:]
+            history = returns.loc[returns.index < day].tail(60)
+            mean, sd = history.mean(), history.std(ddof=1)
+            observed = returns.loc[day]
+            sigma = cfg["thresholds"]["index_sigma"]
+            z = (observed - mean) / sd if sd > 0 else np.nan
+            contributions = result.contributions.loc[day]
+            largest = contributions.reindex(contributions.abs().nlargest(3).index)
+            detail = (
+                f"Net return {observed:.6%}; prior-session mean {mean:.6%}, "
+                f"SD {sd:.6%}; deviation {z:.6f} sigma (limit {sigma:g}). "
+                "Largest absolute daily stock contributions: "
+                + "; ".join(f"{s} {v:.6%}" for s, v in largest.items())
+                + f". Cost fraction {result.levels.loc[day, 'cost']:.6%}. "
+                "These observations establish the rule trigger, not an external cause."
+            )
+            threshold = sigma * sd
+        else:
+            event = result.turnover.set_index("effective_date").loc[day]
+            trades = result.changes[result.changes.effective_date == day]
+            observed = event.turnover
+            threshold = cfg["thresholds"]["turnover"]
+            detail = (
+                f"Decision {event.decision_date.date()}; buys plus sells "
+                f"{observed:.6%} exceed {threshold:.6%}. "
+                f"Adds {(trades.action == 'add').sum()}, "
+                f"removes {(trades.action == 'remove').sum()}; "
+                f"estimated cost {event.estimated_cost:.6%}. "
+                "Turnover includes rotation plus resetting retained drifted holdings."
+            )
+        rows.append(
+            dict(
+                index=issue.symbol,
+                date=day,
+                check_name=issue.check_name,
+                observed=observed,
+                threshold=threshold,
+                explanation=detail,
+            )
+        )
+    return pd.DataFrame(
+        rows, columns=["index", "date", "check_name", "observed", "threshold", "explanation"]
+    )

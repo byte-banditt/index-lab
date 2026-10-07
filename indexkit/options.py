@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy.special import ndtr
 
-from .data import ROOT
+from .data import output_root
 
 SQRT2PI = np.sqrt(2 * np.pi)
 
@@ -146,7 +146,7 @@ def artifacts(cfg):
             ax.grid(alpha=0.2)
         axes[-1].set_xlabel("Spot" if label.endswith("spot") else "Years to expiry")
         fig.tight_layout()
-        fig.savefig(ROOT / "reports" / f"{label}.png")
+        fig.savefig(output_root() / "reports" / f"{label}.png")
         plt.close(fig)
     fig, ax = plt.subplots(figsize=(7, 4))
     for time in [1.0, 0.1, 0.01, 0.001]:
@@ -154,10 +154,12 @@ def artifacts(cfg):
     ax.set(xlabel="Spot", ylabel="Digital delta")
     ax.legend()
     fig.tight_layout()
-    fig.savefig(ROOT / "reports" / "digital_delta.png")
+    fig.savefig(output_root() / "reports" / "digital_delta.png")
     plt.close(fig)
     grid = sensitivity(p)
-    with pd.ExcelWriter(ROOT / "reports" / "sensitivity_grid.xlsx", engine="openpyxl") as writer:
+    with pd.ExcelWriter(
+        output_root() / "reports" / "sensitivity_grid.xlsx", engine="openpyxl"
+    ) as writer:
         grid.to_excel(writer, sheet_name="Long call short digital")
-    grid.to_csv(ROOT / "reports" / "sensitivity_grid.csv")
+    grid.to_csv(output_root() / "reports" / "sensitivity_grid.csv")
     return grid

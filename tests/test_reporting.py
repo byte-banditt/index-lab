@@ -1,4 +1,4 @@
-from indexkit.data import ROOT, config, load, prices
+from indexkit.data import config, load, output_root, prices
 from indexkit.index_engine import benchmark, build
 from indexkit.reporting import format_workbook, summary
 from openpyxl import Workbook, load_workbook
@@ -10,7 +10,7 @@ def test_metrics_and_formats():
     f, _ = load(c)
     p = prices(f, c)
     r = build(p, "MOM10", c)
-    b = benchmark(p, r.levels.index, c)
+    b = benchmark(p, r.levels.index, c, f)
     table = summary({"MOM10": r}, b, c)
     assert len(table) == 3
     assert table.iloc[0].CAGR == (
@@ -32,16 +32,33 @@ def test_generated_artifacts():
     from run_all import run
 
     run(fast=True)
-    book = load_workbook(ROOT / "reports/performance.xlsx", data_only=True)
+    import json
+
+    manifest = json.loads((output_root() / "reports/run_manifest.json").read_text())
+    for key in ["universe_verified", "full_nifty50", "author_primer_complete", "notes_published"]:
+        assert manifest[key] == "unverified"
+    assert manifest["attribution_benchmark"] == "Equal-weight sample proxy"
+    book = load_workbook(output_root() / "reports/performance.xlsx", data_only=True)
     assert {"Summary", "Attribution", "Stress", "Sensitivity grid"}.issubset(book.sheetnames)
     headers = [c.value for c in book["Summary"][1]]
     col = headers.index("CAGR") + 1
     assert book["Summary"].cell(2, col).data_type == "n"
-    assert len(Presentation(ROOT / "reports/factsheet.pptx").slides) == 4
+    assert len(Presentation(output_root() / "reports/factsheet.pptx").slides) == 5
     for name in [
         "index_methodology.md",
         "index_launch_form.md",
         "commentary.md",
         "index_change_note_example.md",
     ]:
-        assert (ROOT / "docs" / name).stat().st_size > 100
+        assert (output_root() / "docs" / name).stat().st_size > 100
+
+
+def test_readme_local_links_exist():
+    import re
+
+    from indexkit.data import ROOT
+
+    for readme in (ROOT / "README.md", ROOT.parent / "README.md"):
+        for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", readme.read_text()):
+            if "://" not in target and not target.startswith("#"):
+                assert (readme.parent / target.split("#")[0]).exists(), target

@@ -10,6 +10,7 @@ from indexkit.index_engine import benchmark, build, modification_demo
 
 def sample():
     c = config()
+    c["benchmark"] = "equal_weight_sample"
     days = pd.bdate_range("2020-01-01", periods=420)
     p = pd.DataFrame(
         100 * np.exp(np.arange(len(days))[:, None] * np.linspace(0.0001, 0.001, 20)),
@@ -74,3 +75,30 @@ def test_data_and_mdq_reuse():
     bad.loc[i, "adj_close"] = 0
     with pytest.raises(ValueError):
         prices(bad, c)
+
+
+def test_nifty_benchmark_gaps_performance_and_beta():
+    from indexkit.index_engine import metrics
+    from indexkit.stress import betas
+
+    c, p = sample()
+    dates = p.index[:8]
+    close = pd.Series([100, 101, np.nan, 104, 102, 105, 103, 106], index=dates)
+    frame = pd.DataFrame({"symbol": "^NSEI", "date": dates, "close": close.values})
+    c["benchmark"] = "^NSEI"
+    b = benchmark(p, dates, c, frame)
+    assert b.attrs["label"] == "Nifty 50 price index (^NSEI)"
+    assert b.level.iloc[-1] == pytest.approx(1060)
+    assert b.return_.iloc[2:4].isna().all()
+    stocks = pd.DataFrame({"X": close.ffill().values}, index=dates)
+    stock_returns = stocks.X.pct_change(fill_method=None)
+    levels = pd.DataFrame({"level": stocks.X, "return_": stock_returns.fillna(0)})
+    m = metrics(levels, b.return_, c)
+    assert m["tracking_error"] == pytest.approx(0)
+    assert m["benchmark_observations"] == 5
+    assert betas(stocks, b, c).X == pytest.approx(1)
+    assert metrics(b, b.return_, c)["CAGR"] == pytest.approx(
+        1.06 ** (365.25 / (dates[-1] - dates[0]).days) - 1
+    )
+    with pytest.raises(ValueError, match="source rows"):
+        benchmark(p, dates, c)

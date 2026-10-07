@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy.special import ndtr
 
-from .data import ROOT
+from .data import ROOT, output_root
 from .options import digital
 
 
@@ -72,7 +72,12 @@ def dv01(curve, fixed, start=0.0, end=5.0, notional=1.0, frequency=2):
 
 
 def black76(forward, strike, expiry, vol, discount=1.0, kind="call"):
-    if kind not in {"call", "put"} or min(forward, strike, vol, discount) <= 0 or expiry < 0:
+    if (
+        not np.isfinite([forward, strike, expiry, vol, discount]).all()
+        or kind not in {"call", "put"}
+        or min(forward, strike, vol, discount) <= 0
+        or expiry < 0
+    ):
         raise ValueError(
             "Black-76 needs positive forward, strike, vol, discount and nonnegative expiry"
         )
@@ -85,8 +90,18 @@ def black76(forward, strike, expiry, vol, discount=1.0, kind="call"):
 
 
 def rate_digital(curve, forward, strike, expiry, payment, vol, kind="call", cash=1.0):
-    if payment < expiry:
-        raise ValueError("Digital payment before fixing")
+    if (
+        not np.isfinite([forward, strike, expiry, payment, vol, cash]).all()
+        or min(forward, strike) <= 0
+        or min(expiry, payment, vol, cash) < 0
+        or payment < expiry
+        or kind not in {"call", "put"}
+    ):
+        raise ValueError("Invalid rate digital inputs")
+    if expiry == 0 or vol == 0:
+        # Strict cash-or-nothing: at equality neither call nor put pays.
+        exercised = forward > strike if kind == "call" else forward < strike
+        return float(curve.df(payment) * cash * exercised)
     return float(
         curve.df(payment) * digital(forward, strike, expiry, 0.0, vol, 0.0, kind, cash)["price"]
     )
@@ -338,9 +353,9 @@ def pricing_sheet(cfg, fast=False):
         return bool(abs(row["parity_residual"]) <= tolerance)
 
     table["parity_pass"] = table.apply(checked, axis=1)
-    table.to_csv(ROOT / "reports/derivatives_pricing_sheet.csv", index=False)
+    table.to_csv(output_root() / "reports/derivatives_pricing_sheet.csv", index=False)
     with pd.ExcelWriter(
-        ROOT / "reports/derivatives_pricing_sheet.xlsx", engine="openpyxl"
+        output_root() / "reports/derivatives_pricing_sheet.xlsx", engine="openpyxl"
     ) as writer:
         table.to_excel(writer, index=False, sheet_name="Prices")
         inputs.to_excel(writer, index=False, sheet_name="Illustrative zero curve")

@@ -7,9 +7,10 @@ from indexkit.options import digital, implied_vol, monte_carlo, sensitivity, van
 @pytest.mark.parametrize("kind", ["call", "put"])
 def test_greeks(kind):
     s, k, t, r, v, q = 103.0, 100.0, 0.7, 0.04, 0.23, 0.015
-    value = lambda spot=s, time=t, rate=r, vol=v: float(
-        vanilla(spot, k, time, rate, vol, q, kind)["price"]
-    )
+
+    def value(spot=s, time=t, rate=r, vol=v):
+        return float(vanilla(spot, k, time, rate, vol, q, kind)["price"])
+
     g = vanilla(s, k, t, r, v, q, kind)
     hs = 0.01
     h = 1e-5
@@ -24,7 +25,10 @@ def test_greeks(kind):
         diff = (value(**{arg: base + h}) - value(**{arg: base - h})) / (2 * h)
         assert g[field] == pytest.approx(-diff if field == "theta" else diff, rel=1e-6)
     d = digital(s, k, t, r, v, q, kind)
-    fn = lambda spot=s, vol=v: float(digital(spot, k, t, r, vol, q, kind)["price"])
+
+    def fn(spot=s, vol=v):
+        return float(digital(spot, k, t, r, vol, q, kind)["price"])
+
     assert d["delta"] == pytest.approx((fn(spot=s + hs) - fn(spot=s - hs)) / (2 * hs), rel=1e-6)
     assert d["vega"] == pytest.approx((fn(vol=v + h) - fn(vol=v - h)) / (2 * h), rel=1e-6)
 

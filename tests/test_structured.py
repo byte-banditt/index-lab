@@ -33,3 +33,26 @@ def test_crn_and_probability():
     skew = skew_prices(config()["options"])
     assert (skew.illustrative_vol.diff().dropna() < 0).all()
     assert np.isfinite(skew.to_numpy()).all()
+
+
+@pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+@pytest.mark.parametrize(
+    "field", ["spot", "reference", "vol", "r", "q", "coupon", "autocall_barrier", "knock_in"]
+)
+def test_autocall_rejects_nonfinite(field, bad):
+    args = dict(
+        spot=100, reference=100, vol=0.2, r=0.05, q=0, observations=[1.0], paths=10, steps=10
+    )
+    args[field] = bad
+    with pytest.raises(ValueError):
+        autocallable(**args)
+
+
+def test_structured_rejects_invalid_paths_and_dates():
+    with pytest.raises(ValueError):
+        factors(np.nan, 0.05, 0, [1], 10, 42)
+    for dates in [[np.nan], [np.inf], [0.5, 0.5]]:
+        with pytest.raises(ValueError):
+            factors(0.2, 0.05, 0, dates, 10, 42)
+    with pytest.raises(ValueError):
+        payoff(100, 100, [[np.nan, 1]], [1, 1], [1], 0, 0.08, 1, 0.6)

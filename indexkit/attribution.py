@@ -4,14 +4,14 @@ import numpy as np
 import pandas as pd
 
 
-def brinson(result, panel, bench, sectors):
+def brinson(result, panel, bench, sectors, targets=None, label="Equal-weight sample proxy"):
     returns = panel.pct_change(fill_method=None)
     rows = []
     periods = []
     for period, weights in result.weights.groupby(result.weights.index.to_period("M")):
         dates = weights.index
         wp = weights.iloc[0]
-        wb = pd.Series(1 / len(wp), index=wp.index)
+        wb = pd.Series(1 / len(wp), index=wp.index) if targets is None else pd.Series(targets)
         stock = (1 + returns.loc[dates]).prod() - 1
         rp = (wp * stock).sum()
         rb = (wb * stock).sum()
@@ -21,6 +21,10 @@ def brinson(result, panel, bench, sectors):
             raise ValueError("Monthly holdings assumptions do not reconcile")
         for sector in sorted(set(sectors.values())):
             names = [s for s in wp.index if sectors[s] == sector]
+            # The static map can contain sectors removed by a universe change.
+            # Such a sector has neither portfolio nor benchmark exposure.
+            if not names:
+                continue
             ps = wp[names].sum()
             bs = wb[names].sum()
             rbs = (wb[names] * stock[names]).sum() / bs
@@ -30,6 +34,7 @@ def brinson(result, panel, bench, sectors):
             interaction = (ps - bs) * (rps - rbs)
             rows.append(
                 dict(
+                    attribution_benchmark=label,
                     index=result.name,
                     month=str(period),
                     sector=sector,
@@ -45,6 +50,7 @@ def brinson(result, panel, bench, sectors):
         net = (1 + result.levels.loc[dates, "return_"]).prod() - 1
         periods.append(
             dict(
+                attribution_benchmark=label,
                 index=result.name,
                 month=str(period),
                 portfolio_gross=rp,
@@ -62,6 +68,7 @@ def brinson(result, panel, bench, sectors):
     bridge = pd.DataFrame(
         [
             dict(
+                attribution_benchmark=label,
                 index=result.name,
                 arithmetic_active=arithmetic,
                 compounded_active=compounded,
