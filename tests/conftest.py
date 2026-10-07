@@ -11,6 +11,9 @@ def fixture_config_path(tmp_path_factory):
 
 
 @pytest.fixture(autouse=True)
-def isolated_indexlab(tmp_path, monkeypatch, fixture_config_path):
+def isolated_indexlab(tmp_path, monkeypatch, fixture_config_path, request):
+    if request.node.get_closest_marker("realdata"):
+        return
+    monkeypatch.delenv("INDEXLAB_DB", raising=False)
     monkeypatch.setenv("INDEXLAB_CONFIG", str(fixture_config_path))
     monkeypatch.setenv("INDEXLAB_OUTPUT_DIR", str(tmp_path / "artifacts"))

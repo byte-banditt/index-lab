@@ -9,13 +9,13 @@ import pandas as pd
 from mdq.ingest import upsert_prices
 from mdq.store import connect, init_db
 
-from .data import config
+from .data import ROOT, config
 
 
 def create_fixture(directory):
     directory = Path(directory).resolve()
     directory.mkdir(parents=True, exist_ok=True)
-    cfg = config(Path(__file__).resolve().parents[1] / "config.yaml")
+    cfg = config(ROOT / "config.yaml")
     database = directory / "fixture.sqlite"
     init_db(str(database))
     days = pd.bdate_range("2021-01-01", periods=420)

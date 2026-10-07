@@ -204,7 +204,7 @@ def _run(fast, cfg):
     return cfg, frame, panel, results, bench
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--fast", action="store_true")
@@ -213,3 +213,7 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir")
     args = parser.parse_args()
     run(not args.full, config(args.config), args.output_dir)
+
+
+if __name__ == "__main__":
+    main()

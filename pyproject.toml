@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "index-lab"
+version = "0.1.0"
+description = "Offline index research, monitoring and derivatives validation"
+requires-python = ">=3.10"
+dependencies = [
+  "pandas", "numpy", "scipy", "matplotlib", "openpyxl", "python-pptx", "pyyaml",
+  "mdq @ git+https://github.com/byte-banditt/mdq.git@700db229caebf6718acb949a2c145b6513595808",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "ruff"]
+
+[project.scripts]
+index-lab = "run_all:main"
+
+[tool.setuptools]
+py-modules = ["run_all"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["indexkit*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = ["realdata: optional read-only checks of an observed-data DB"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]

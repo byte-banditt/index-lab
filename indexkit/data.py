@@ -1,6 +1,5 @@
 """Read existing mdq storage; reuse its checks without mutating source DB."""
 
-import json
 import os
 import sqlite3
 from contextlib import contextmanager
@@ -9,9 +8,10 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import yaml
 from mdq import checks
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent.parent
 
 
 _OUTPUT = ContextVar("indexlab_output", default=None)
@@ -32,9 +32,11 @@ def output_location(path):
 
 def config(path=None):
     path = Path(path or os.environ.get("INDEXLAB_CONFIG", ROOT / "config.yaml")).resolve()
-    cfg = json.loads(path.read_text())
+    cfg = yaml.safe_load(path.read_text())
     for key in ("database", "curve_inputs", "sector_inputs"):
         cfg[key] = str((path.parent / cfg[key]).resolve())
+    if os.environ.get("INDEXLAB_DB"):
+        cfg["database"] = str(Path(os.environ["INDEXLAB_DB"]).expanduser().resolve())
     return cfg
 
 
