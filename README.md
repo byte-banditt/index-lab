@@ -4,7 +4,7 @@ Offline Python research tools for configurable equity and multi-asset indices, d
 
 ## Scope and limits
 
-The real-data universe is a survivor sample of Indian equities; current Nifty membership and adjusted-close provenance are unverified. Performance, tracking error and historical beta use the Nifty 50 **price** index (`^NSEI` close) against adjusted-close stocks, so this is not a matched total-return comparison. Sector Brinson attribution uses the labelled equal-weight sample proxy because official Nifty sector weights are absent. MULTI attribution instead compares asset sleeves against fixed configured weights. Rates and skew inputs are illustrative, with no market calibration. R check: **NOT RUN** here because Rscript is unavailable. There are no live operations, vendor integrations or investment recommendations. Fixture observations, including its `^NSEI`, are synthetic; their outputs are not market performance.
+The real-data universe is a survivor sample of Indian equities; current Nifty membership and adjusted-close provenance are unverified. Performance, tracking error and historical beta use the Nifty 50 **price** index (`^NSEI` close) against adjusted-close stocks, so this is not a matched total-return comparison. Sector Brinson attribution uses the labelled equal-weight sample proxy because official Nifty sector weights are absent. MULTI attribution instead compares asset sleeves against fixed configured weights. Rates and skew inputs are illustrative, with no market calibration. R check: **NOT RUN locally** because Rscript is unavailable on the local machine. There are no live operations, vendor integrations or investment recommendations. Fixture observations, including its `^NSEI`, are synthetic; their outputs are not market performance.
 
 ## Install
 
@@ -84,7 +84,7 @@ Missing MULTI source symbols are reported as `NOT DONE`; they are not substitute
 | [explain_day.py](scripts/explain_day.py) | Read stored weights, contributions and flags | [test_crosschecks.py](tests/test_crosschecks.py) |
 | [make_ingestion_config.py](scripts/make_ingestion_config.py) | Write mdq inputs from config without a download | [test_standalone.py](tests/test_standalone.py) |
 | [Java](java_bs/BlackScholes.java) | Independent vanilla price/delta comparison | [test_java.py](tests/test_java.py) |
-| [R](r_check/verify.R) | Optional metric comparison; NOT RUN here | [test_crosschecks.py](tests/test_crosschecks.py) checks unavailable-tool status |
+| [R](r_check/verify.R) | Optional metric comparison; NOT RUN locally | [test_crosschecks.py](tests/test_crosschecks.py) checks unavailable-tool status |
 
 ## Tests and lint
 
@@ -95,7 +95,7 @@ pytest -q -m 'not realdata'
 INDEXLAB_DB=/absolute/path/to/mdq.sqlite pytest -q -m realdata
 ```
 
-Normal tests build a synthetic fixture DB and write to pytest temporary directories. The `realdata` test is read-only and skips with a reason when its DB is absent. The README link and inventory checks are in [test_reporting.py](tests/test_reporting.py) and [test_standalone.py](tests/test_standalone.py). [CI](.github/workflows/ci.yml) declares the requested Python matrix and offline rebuild; it has not been executed on GitHub.
+Normal tests build a synthetic fixture DB and write to pytest temporary directories. The `realdata` test is read-only and skips with a reason when its DB is absent. The README link and inventory checks are in [test_reporting.py](tests/test_reporting.py) and [test_standalone.py](tests/test_standalone.py). [CI](.github/workflows/ci.yml) defines the requested Python matrix and offline rebuild. See the [public workflow runs](https://github.com/byte-banditt/index-lab/actions/workflows/ci.yml) for executed checks.
 
 ## Project layout
 

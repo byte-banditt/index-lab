@@ -70,4 +70,20 @@ All checks passed!
 }
 ```
 
-No market-price DB, generated reports, private career files or environment credentials were included in this commit. Historical extraction reports describe their earlier no-push state; this publication is separately authorized. GitHub CI status will be reported after the push; no CI success is claimed here.
+No market-price DB, generated reports, private career files or environment credentials were included in this commit. Historical extraction reports describe their earlier no-push state; this publication is separately authorized. The GitHub evidence below records the dependency-fix commit; later documentation commits have their own workflow runs.
+
+## Executed GitHub CI
+
+Source: [workflow run](https://github.com/byte-banditt/index-lab/actions/runs/37664232611); tested commit `4d498c84a37d75d20d5c30e4c260399e1136c0d4`.
+
+| Job | Conclusion |
+| --- | --- |
+| test (3.12) | success |
+| test (3.11) | success |
+
+```text
+test (3.12)	Run ruff check	2026-10-07T18:06:51.8875168Z All checks passed!
+test (3.12)	Run pytest -q	2026-10-07T18:07:26.2218388Z 96 passed, 1 skipped in 33.27s
+test (3.11)	Run ruff check	2026-10-07T18:06:46.5791723Z All checks passed!
+test (3.11)	Run pytest -q	2026-10-07T18:07:17.3216527Z 96 passed, 1 skipped in 29.48s
+```
