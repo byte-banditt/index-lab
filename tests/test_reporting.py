@@ -1,8 +1,9 @@
+from openpyxl import Workbook, load_workbook
+from pptx import Presentation
+
 from indexkit.data import config, load, output_root, prices
 from indexkit.index_engine import benchmark, build
 from indexkit.reporting import format_workbook, summary
-from openpyxl import Workbook, load_workbook
-from pptx import Presentation
 
 
 def test_metrics_and_formats():
@@ -58,7 +59,7 @@ def test_readme_local_links_exist():
 
     from indexkit.data import ROOT
 
-    for readme in (ROOT / "README.md", ROOT.parent / "README.md"):
+    for readme in (ROOT / "README.md",):
         for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", readme.read_text()):
             if "://" not in target and not target.startswith("#"):
                 assert (readme.parent / target.split("#")[0]).exists(), target

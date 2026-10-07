@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from indexkit.rates import (
     DiscountCurve,
     cap_floor,

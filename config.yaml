@@ -1,5 +1,5 @@
 {
-  "database": "../data/mdq.sqlite",
+  "database": "data/mdq.sqlite",
   "price_table": "prices_raw",
   "price_field": "adj_close",
   "universe": [
@@ -182,7 +182,7 @@
       25
     ]
   },
-  "notes": {
+  "drafts": {
     "expiry_times": [
       1.0,
       0.25,

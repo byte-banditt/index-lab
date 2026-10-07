@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from indexkit.data import config
 from indexkit.options import digital, implied_vol, monte_carlo, sensitivity, vanilla
 

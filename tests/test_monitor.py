@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+
 from indexkit.data import config, load, prices
 from indexkit.index_engine import build
 from indexkit.monitor import monitor, rebalance_report

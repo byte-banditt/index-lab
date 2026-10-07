@@ -3,6 +3,7 @@ import copy
 import numpy as np
 import pandas as pd
 import pytest
+
 from indexkit.calendar import calendar_checks, rebalances
 from indexkit.data import config, load, prices, quality
 from indexkit.index_engine import benchmark, build, modification_demo

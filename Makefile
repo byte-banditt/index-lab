@@ -4,7 +4,7 @@ all:
 fast:
 	python run_all.py --fast
 test:
-	python -m pytest ../tests tests -q
+	python -m pytest tests -q
 java:
 	python java_bs/generate_reference.py
 	javac java_bs/BlackScholes.java

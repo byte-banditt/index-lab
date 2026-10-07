@@ -1,6 +1,7 @@
 """All Index Lab tests use offline source fixtures and isolated output paths."""
 
 import pytest
+
 from indexkit.fixtures import create_fixture
 
 

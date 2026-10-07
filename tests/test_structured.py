@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from indexkit.data import config
 from indexkit.structured import autocallable, factors, greeks, payoff, skew_prices
 

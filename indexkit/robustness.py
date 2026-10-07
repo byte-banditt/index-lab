@@ -36,10 +36,10 @@ def block_bootstrap(active, cfg):
 
 
 def defaults_history(cfg):
-    path = "index_lab/config.yaml"
+    path = "config.yaml"
     command = ["git", "log", "--reverse", "--format=%H", "--", path]
     try:
-        revisions = subprocess.check_output(command, cwd=ROOT.parent, text=True).splitlines()
+        revisions = subprocess.check_output(command, cwd=ROOT, text=True).splitlines()
         rows = []
         current = [
             cfg["indices"]["MOM10"]["n"],
@@ -50,7 +50,7 @@ def defaults_history(cfg):
         ]
         for revision in revisions:
             text = subprocess.check_output(
-                ["git", "show", f"{revision}:{path}"], cwd=ROOT.parent, text=True
+                ["git", "show", f"{revision}:{path}"], cwd=ROOT, text=True
             )
             c = json.loads(text)
             values = [

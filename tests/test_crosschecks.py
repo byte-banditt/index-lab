@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import pandas as pd
 import pytest
+
 from indexkit.crosschecks import equity_checks, languages
 from indexkit.data import ROOT, config, load, output_root, prices
 from indexkit.index_engine import build

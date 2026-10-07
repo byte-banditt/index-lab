@@ -6,7 +6,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
 from mdq.ingest import upsert_prices
 from mdq.store import connect, init_db
 

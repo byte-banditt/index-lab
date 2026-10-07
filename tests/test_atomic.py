@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+
 from indexkit.atomic import publish
 from indexkit.data import config, load, output_root
 
