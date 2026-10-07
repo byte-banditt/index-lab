@@ -23,23 +23,21 @@ def factors(vol, r, q, observations, paths, seed, steps=252):
         or (np.diff(observations) <= 0).any()
     ):
         raise ValueError("Invalid path parameters")
-    term = observations[-1]
-    dt = term / steps
-    ticks = np.rint(observations / dt).astype(int)
-    if (ticks < 1).any() or len(np.unique(ticks)) != len(ticks):
-        raise ValueError("Observation dates collapse on simulation grid")
+    grid = np.unique(np.r_[np.linspace(0, observations[-1], steps + 1), observations])
     state = np.ones(paths)
     minimum = state.copy()
     obs = []
     rng = np.random.default_rng(seed)
-    for step in range(1, steps + 1):
+    observation_set = set(observations)
+    for before, time in zip(grid[:-1], grid[1:]):
+        dt = time - before
         state *= np.exp(
             (r - q - 0.5 * vol**2) * dt + vol * np.sqrt(dt) * rng.standard_normal(paths)
         )
         minimum = np.minimum(minimum, state)
-        if step in ticks:
+        if time in observation_set:
             obs.append(state.copy())
-    return np.asarray(obs), minimum, ticks * dt
+    return np.asarray(obs), minimum, observations.copy()
 
 
 def payoff(spot, reference, obs, minimum, times, r, coupon, autocall_barrier, knock_in):
@@ -48,7 +46,8 @@ def payoff(spot, reference, obs, minimum, times, r, coupon, autocall_barrier, kn
     times = np.asarray(times, dtype=float)
     if (
         not np.isfinite([spot, reference, r, coupon, autocall_barrier, knock_in]).all()
-        or min(spot, reference, autocall_barrier, knock_in) <= 0
+        or min(spot, reference) <= 0
+        or min(autocall_barrier, knock_in) < 0
         or coupon < 0
     ):
         raise ValueError("Invalid contract")
@@ -75,13 +74,14 @@ def payoff(spot, reference, obs, minimum, times, r, coupon, autocall_barrier, kn
             if i < len(times) - 1
             else np.zeros(paths, dtype=bool)
         )
-        pv[called] = (1 + coupon * time) * np.exp(-r * time)
+        pv[alive] += coupon * np.exp(-r * time)
+        pv[called] += np.exp(-r * time)
         prob.append(float(called.mean()))
         alive[called] = False
     terminal = spot * obs[-1]
     loss = alive & (spot * minimum <= reference * knock_in) & (terminal < reference)
     principal = np.where(loss, terminal / reference, 1.0)
-    pv[alive] = (principal[alive] + coupon * times[-1]) * np.exp(-r * times[-1])
+    pv[alive] += principal[alive] * np.exp(-r * times[-1])
     return dict(
         price=float(pv.mean()),
         se=float(pv.std(ddof=1) / np.sqrt(paths)),
@@ -216,15 +216,15 @@ def artifacts(cfg, fast=False):
     axes[1, 0].set_title("Long put spread")
     axes[1, 1].plot(
         x,
-        np.minimum(x / s, 1) + p["coupon"] * p["observations"][-1],
+        np.minimum(x / s, 1) + p["coupon"] * len(p["observations"]),
         label="No autocall; prior knock-in",
     )
     axes[1, 1].plot(
         x,
-        np.full(len(x), 1 + p["coupon"] * p["observations"][-1]),
+        np.full(len(x), 1 + p["coupon"] * len(p["observations"])),
         label="No autocall; no knock-in",
     )
-    axes[1, 1].set_title("Autocallable conditional maturity slices")
+    axes[1, 1].set_title("Autocallable undiscounted total cashflows")
     axes[1, 1].legend(fontsize=7)
     for ax in axes.flat:
         ax.set_xlabel("Terminal spot")

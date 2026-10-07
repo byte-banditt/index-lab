@@ -6,7 +6,7 @@ from indexkit.structured import autocallable, factors, greeks, payoff, skew_pric
 
 def test_deterministic_autocall():
     quote = autocallable(100, 100, 0, 0, 0, [0.25, 0.5, 0.75, 1], paths=1000)
-    assert quote["price"] == pytest.approx(1.02)
+    assert quote["price"] == pytest.approx(1.08)
     assert quote["early_call_prob"] == [1.0, 0.0, 0.0, 0.0]
     assert quote["capital_loss_prob"] == 0
 
@@ -16,7 +16,7 @@ def test_loss_payoff():
     minimum = np.array([0.4, 0.7])
     times = np.array([0.5, 1.0])
     result = payoff(100, 100, obs, minimum, times, 0, 0.08, 1, 0.6)
-    assert result["price"] == pytest.approx((0.58 + 1.08) / 2)
+    assert result["price"] == pytest.approx((0.66 + 1.16) / 2)
     assert result["capital_loss_prob"] == 0.5
 
 
@@ -56,3 +56,23 @@ def test_structured_rejects_invalid_paths_and_dates():
             factors(0.2, 0.05, 0, dates, 10, 42)
     with pytest.raises(ValueError):
         payoff(100, 100, [[np.nan, 1]], [1, 1], [1], 0, 0.08, 1, 0.6)
+
+
+def test_exact_observation_grid():
+    observations = [0.173, 0.411, 0.777, 1.003]
+    _, _, times = factors(0.2, 0.05, 0.01, observations, 100, 42, steps=13)
+    np.testing.assert_array_equal(times, observations)
+
+
+def test_autocall_independent_and_degenerate():
+    from indexkit.validation import degenerate_checks, independent, quote
+
+    p = config()["structured"]
+    checks = degenerate_checks(p, 100000, 42)
+    assert checks.passed.all(), checks.to_string()
+    a = quote(p, 100000, 42, 252)
+    b = independent(p, 100000, 43, 504)
+    assert abs(a["price"] - b["price"]) <= 3 * np.hypot(a["se"], b["se"])
+    for i, (pa, pb) in enumerate(zip(a["early_call_prob"], b["early_call_prob"])):
+        se = np.hypot(np.sqrt(pa * (1 - pa) / 100000), b["early_call_se"][i])
+        assert abs(pa - pb) <= 3 * se + 1e-12
