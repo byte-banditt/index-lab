@@ -1,5 +1,7 @@
 # Local clean-clone proof
 
+Historical extraction snapshot. Current public-install status: [publication validation](PUBLICATION_REPORT.md).
+
 Public pinned commit fetch failed. This proof used a process-local Git URL mapping to the original local mdq repository, not a public GitHub install. Python runtime: `Python 3.13.12`. No package source was copied into this project.
 
 | Command in /tmp/proof | Exit code |

@@ -16,7 +16,14 @@ source .venv/bin/activate
 pip install -e '.[dev]'
 ```
 
-The exact mdq dependency is pinned in [pyproject.toml](pyproject.toml) to the source repository's local master at extraction, to retain the storage/DQ behavior actually used. That SHA was not available on the public remote when tested. **Public installation and GitHub CI are not yet proven and cannot fetch that pin until it is published.** The extraction proof used a temporary Git URL transport mapping to the local mdq repository at the identical SHA; it did not change the dependency declaration. No pushes were made.
+The mdq dependency is pinned in [pyproject.toml](pyproject.toml) to publicly available commit `f02f418c99a6771a692572b3390ef8beea16f17e`. This commit extends mdq's public master with the removal of hardcoded report conclusions and its regression test. Its entire `src/mdq` tree matches the local source used during extraction; private local audit history was not published. The historical [extraction report](docs/EXTRACTION_REPORT.md) records the earlier unavailable pin and local transport proof. Current public-install evidence is in [publication validation](docs/PUBLICATION_REPORT.md).
+
+When reusing a venv that already has mdq installed, explicitly reinstall the pinned dependency (the package version is unchanged):
+
+```bash
+pip install --force-reinstall --no-deps 'mdq @ git+https://github.com/byte-banditt/mdq.git@f02f418c99a6771a692572b3390ef8beea16f17e'
+```
+
 
 ## Quickstart: synthetic fixture
 

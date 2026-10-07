@@ -9,7 +9,7 @@ description = "Offline index research, monitoring and derivatives validation"
 requires-python = ">=3.10"
 dependencies = [
   "pandas", "numpy", "scipy", "matplotlib", "openpyxl", "python-pptx", "pyyaml",
-  "mdq @ git+https://github.com/byte-banditt/mdq.git@700db229caebf6718acb949a2c145b6513595808",
+  "mdq @ git+https://github.com/byte-banditt/mdq.git@f02f418c99a6771a692572b3390ef8beea16f17e",
 ]
 
 [project.optional-dependencies]

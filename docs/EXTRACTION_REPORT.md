@@ -1,5 +1,7 @@
 # Extraction report
 
+Historical extraction snapshot. Current public-install status: [publication validation](PUBLICATION_REPORT.md).
+
 ## Outcome
 
 Standalone project: `index-lab`, sibling to the source checkout. No push or merge was executed. The original checkout retains its index directory and stays on master. The unmerged cleanup proposal exists only on a separate branch/worktree. Public installation remains blocked by the unavailable pinned source commit.
