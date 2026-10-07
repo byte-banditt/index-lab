@@ -195,5 +195,10 @@
       1.0,
       1.01
     ]
+  },
+  "ingestion": {
+    "start_date": "2021-10-03",
+    "overlap_days": 5,
+    "return_outlier_robust_z": 8.0
   }
 }

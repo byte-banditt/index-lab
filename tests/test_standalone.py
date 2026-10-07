@@ -22,3 +22,22 @@ def test_optional_real_database():
     assert not frame.empty
     assert {"date", "symbol", cfg["price_field"]}.issubset(frame.columns)
     assert "prices_raw" in inventory
+
+
+def test_ingestion_config_uses_configured_inputs(tmp_path):
+    from mdq.store import load_config
+
+    from scripts.make_ingestion_config import write_config
+
+    cfg = config()
+    written = load_config(write_config(cfg, tmp_path / "ingestion.yaml"))
+    assert written["database"] == cfg["database"]
+    assert written["start_date"] == cfg["ingestion"]["start_date"]
+    assert set(cfg["universe"]).issubset(written["symbols"])
+    assert cfg["multi"]["fx_symbol"] in written["symbols"]
+
+
+def test_readme_inventory_covers_package():
+    text = (ROOT / "README.md").read_text()
+    for module in (ROOT / "indexkit").glob("*.py"):
+        assert f"indexkit/{module.name}" in text
